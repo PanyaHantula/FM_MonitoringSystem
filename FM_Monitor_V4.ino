@@ -6,10 +6,9 @@
    Date: 1 Jul 2024
    Code version: V3.1.3
    Note:
-   - Renew Code
    - Update Blynk 2.0 (Edgent)
    - Update Radio Station infomation via Blynk
-   - Update Table FW/REF
+   - Update Table FW/REF for 1500 watt
    - change Library : PZEM, Blynk, LCD 20x2
    - This version is runing without Line Notify
 
@@ -119,6 +118,8 @@ void setup() {
 
   //----------------------------------------------------------
   Serial.println(":# initialize BlynkEdgent");
+  lcd.setCursor(0, 3);
+  lcd.print("-> Connect to Blynk ");
   BlynkEdgent.begin();
   BlynkEdgent.run();
   Serial.println("-> Done\n");
@@ -159,6 +160,7 @@ void setup() {
   strftime(timeMin, 3, "%M", &timeinfo);
   prev_Min = atoi(timeMin);
   Serial.println("-> Done");
+
   //----------------------------------------------------------
   // Serial.println(":# initialize Watchdog");
   // esp_task_wdt_init(WDT_TIMEOUT, true);  // Initialize ESP32 Task WDT
@@ -206,7 +208,6 @@ void setup() {
   delay(2000);
   lcd.clear();
   Serial.println("-> Done\n");
-
 }
 // ##########################################################################
 //--------------------------------
@@ -215,17 +216,31 @@ void setup() {
 void loop() {
   // esp_task_wdt_reset();  // Reset watchdog
   BlynkEdgent.run();
+  // Check Boot button is Low that used to active reset blynk
+  if (digitalRead(BOARD_BUTTON_PIN) == 0) {
+    if (debug) Serial.println("Reset Blynk Configulation");
 
-  //-------- Function Call --------
-  CountRunTime();
-  GetParamALL();
-  LCD_ShowParam();
-  Check_Condition_PWR();
-  Check_Condition_VSWR();
-  Check_Condition_Temp();
-  Check_Condition_Audio();
-  WelcomeNotify();
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("      BLYNK 2.0    ");
+    lcd.setCursor(0, 2);
+    lcd.print("   Reset Config    ");
+    lcd.setCursor(0, 3);
+    lcd.print("-> Connect to Blynk");
 
+  } else {
+    //-------- Function Call --------
+    Serial.println("------------------------------------");
+    CountRunTime();
+    GetParamALL();
+    LCD_ShowParam();
+    Serial.println("------------------------------------");
+    Check_Condition_PWR();
+    Check_Condition_VSWR();
+    Check_Condition_Temp();
+    Check_Condition_Audio();
+    WelcomeNotify();
+  }
   //------------ Update Blynk interval-----------------------
   if (millis() - Blynk_LastTime > BlynkUpdatePeriod) {
     Blynk_LastTime = millis();
@@ -248,8 +263,9 @@ void CountRunTime(void) {
     char timeMin[3];
     strftime(timeMin, 3, "%M", &timeinfo);
     int MinNow = atoi(timeMin);
-    Serial.print("Time: ");
-    Serial.println(TimeNow);
+
+    // Serial.print("Time: ");
+    // Serial.println(TimeNow);
 
     if (prev_Min != MinNow) {
       prev_Min = MinNow;
@@ -267,13 +283,13 @@ void CountRunTime(void) {
       }
       if (Run_Time_Min % 5 == 0)  // Update Minute to EEPROM Every 10 minute
       {                           // Upadte Min
-        Serial.println("-> Saveing Run_Time_Min");
+        // Serial.println("-> Saveing Run_Time_Min");
         EEPROM_Write(231, 234, String(Run_Time_Min));
 
-        Serial.println("-> Saveing Run_Time_Hour");
+        // Serial.println("-> Saveing Run_Time_Hour");
         EEPROM_Write(235, 238, String(Run_Time_Hour));
 
-        Serial.println("-> Saveing Run_Time_day");
+        // Serial.println("-> Saveing Run_Time_day");
         EEPROM_Write(239, 242, String(Run_Time_day));
       }
     }
@@ -283,7 +299,7 @@ void CountRunTime(void) {
 //----------------------------------------------------------
 void GetParamALL(void) {
   if (debug)
-    Serial.println(":# GET Parameter:");
+    Serial.println("\n----- GET Parameter -----");
 
   FW_VALUE = GetFW();
   REF_VALUE = GetREF();
@@ -313,8 +329,6 @@ void GetParamALL(void) {
     Serial.print(":# Wifi Signal: ");
     WifiSignal = String(WiFi.RSSI());
     Serial.println(WifiSignal);
-
-    Serial.println("------------------------------------------------------------");
     Serial.println();
   }
 }
@@ -322,7 +336,7 @@ void GetParamALL(void) {
 float GetAudioLevel(void) {
   float Buff_ADC_Audio = analogRead(ADC_Auido) / 4.0;
   if (debug) {
-    Serial.print(":# Reading Audio UV Value... => ");
+    Serial.println(":# Reading Audio UV Value...");
 
     Serial.print("Audio ADC: ");
     Serial.print(Buff_ADC_Audio);
@@ -363,17 +377,16 @@ void LCD_ShowParam(void) {
   lcd.setCursor(0, 0);
   lcd.print(Buff_Srt);
 
-  Buff_Srt = "TX:";
-  Buff_Srt += TX_Temp;
-  Buff_Srt += "c";
-  Buff_Srt += " VSWR:";
+  Buff_Srt = "VSWR:";
   Buff_Srt += VSWR;
   Buff_Srt += "   ";
-
   lcd.setCursor(0, 1);
   lcd.print(Buff_Srt);
 
-  Buff_Srt = "Room:";
+  Buff_Srt = "TR:";
+  Buff_Srt += TX_Temp;
+  Buff_Srt += "c, ";
+  Buff_Srt += "R:";
   Buff_Srt += Room_Temp;
   Buff_Srt += "c     ";
   lcd.setCursor(0, 2);
@@ -415,11 +428,11 @@ void I2C_Scanner(void) {
 //----------------------------------------------------------
 void Check_Condition_PWR(void) {
   //----------- Check FW Critical ------------------
-  if (debug) Serial.println("-> Check FW Protection");
-  if ((FW_VALUE > FW_Critical_threshold) && Protection) {
+  if (debug) Serial.println("#: Check FW Protection");
+  if ((FW_VALUE >= float(FW_Critical_threshold)) && Protection) {
     Count_FW_Critical++;
 
-    if ((Count_FW_Critical >= 3))  // กำลังส่งส่งเกินจำกัด
+    if ((Count_FW_Critical >= 5))  // กำลังส่งส่งเกินจำกัด
     {
       digitalWrite(Relay_AC, HIGH);
       digitalWrite(Ralay_Excitor, LOW);
@@ -427,27 +440,27 @@ void Check_Condition_PWR(void) {
 
       Serial.println("   FW Power Critical ");
       Serial.println(":# TX Power is OFF !!");
-      /*
-            // Radio Station detial
-            Buff_Srt = "\n";
-            Buff_Srt += StringRadioStation;
-            Buff_Srt += RadioStationName;
-            Buff_Srt += "\n";
-            Buff_Srt += StringFreq;
-            Buff_Srt += RadioFreq;
-            Buff_Srt += " MHz \n";
-            Buff_Srt += "*****************************";
-            Buff_Srt += "\n";
-            Buff_Srt += FW_Critical_MSG;
-            Buff_Srt += "\n";
-            Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
-            Buff_Srt += FW_VALUE;
-            Buff_Srt += " วัตต์";  // วัตต์
-      */
+
+      Serial.println("Send FW Power Critical");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += FW_Critical_MSG;
+      Buff_Srt += "\n";
+      Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
+      Buff_Srt += FW_VALUE;
+      Buff_Srt += " วัตต์";  // วัตต์
+      Blynk.logEvent("fw_power_critical", Buff_Srt);
 
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("   Power FW is Higher   ");
+      lcd.print(" Power FW is High  ");
       lcd.setCursor(0, 1);
       lcd.print("  TRANSMITTER OFF  ");
 
@@ -466,18 +479,18 @@ void Check_Condition_PWR(void) {
       }
     }
   } else {
-    Count_FW_Critical = 0;
+    if (debug) Serial.println("\tFW Power Critical : false");
     // ----------- check FW warning ----------------
-    if (debug) Serial.println("-> check FW warning");
-    if ((FW_VALUE > FW_warning_threshold) && Notify_Warning) {
-      Reset_FW_Warning_Time = millis();  // Get Time for Reset warning
+    if (debug) Serial.println("#: check FW warning");
+
+    Count_FW_Critical = 0;
+    if ((FW_VALUE >= float(FW_warning_threshold)) && Notify_Warning) {
+      Reset_FW_Warning_Time = millis();
+      Serial.println("\tFW Power Higher -> Warning");
 
       if (FW_Warning)  // เตือนกำลังส่งสูงเกิน
       {
-        Serial.println(" FW Power Higher -> Warning");
-
-        /*
-        // Radio Station detial
+        Serial.println("Send FW Power Higher Warning");
         Buff_Srt = "\n";
         Buff_Srt += StringRadioStation;
         Buff_Srt += RadioStationName;
@@ -492,14 +505,20 @@ void Check_Condition_PWR(void) {
         Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
         Buff_Srt += FW_VALUE;
         Buff_Srt += " วัตต์";  // วัตต์
-        sendLine(Buff_Srt);
-        */
-
+        Blynk.logEvent("fw_power_high_warning", Buff_Srt);
+        beep();
+        delay(3000);
         FW_Warning = false;
       }
     } else {
-      if ((millis() - Reset_FW_Warning_Time > Time_for_Reset_Warning_Check) && (FW_VALUE < (FW_warning_threshold - 20))) {
-        FW_Warning = true;
+      if (debug) Serial.println("\tFW Power warning : false");
+      if ((millis() - Reset_FW_Warning_Time > Time_for_Reset_Warning_Check) && (FW_VALUE < (FW_warning_threshold - 5))) {
+        if (FW_Warning == false) {
+          Serial.print("\tReset FM Warning status ");
+          Serial.println(" => FW_Warning status = " + String(FW_Warning));
+          FW_Warning = true;
+          delay(3000);
+        }
       }
     }
   }
@@ -507,10 +526,10 @@ void Check_Condition_PWR(void) {
 //----------------------------------------------------------
 void Check_Condition_VSWR(void) {
   //----------- Check VSWR Critical ------------------
-  if (debug) Serial.println("-> Check VSWR Protection");
-  if ((VSWR > VSWR_Critical_threshold) && Protection) {
+  if (debug) Serial.println("#: Check VSWR Protection");
+  if ((VSWR >= float(VSWR_Critical_threshold)) && Protection) {
     Count_VSWR_Critical++;
-    if (Count_VSWR_Critical >= 1) {
+    if (Count_VSWR_Critical >= 5) {
 
       Serial.println("=> FW VSWR Critical");
       Serial.println(":# TX Power is OFF !!");
@@ -521,37 +540,33 @@ void Check_Condition_VSWR(void) {
 
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("   VSWR is Higher   ");
+      lcd.print("    VSWR is High   ");
       lcd.setCursor(0, 1);
       lcd.print("  TRANSMITTER OFF  ");
 
-      /*
-        // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += "\n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += VSWR_Critical_MSG;
-        Buff_Srt += "\n";
-        Buff_Srt += "VSWR : ";
-        Buff_Srt += VSWR;
-        Buff_Srt += "\n";
-        Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
-        Buff_Srt += FW_VALUE;
-        Buff_Srt += " วัตต์";  // วัตต์
-        Buff_Srt += "\n";
-        Buff_Srt += "กำลังสะท้อน : ";
-        Buff_Srt += REF_VALUE;
-        Buff_Srt += " วัตต์";  // วัตต์
-
-        sendLine(Buff_Srt);
-        */
-
+      Serial.println("Send VSWR Critical -> TX Power is OFF !!");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += VSWR_Critical_MSG;
+      Buff_Srt += "\n";
+      Buff_Srt += "VSWR : ";
+      Buff_Srt += VSWR;
+      Buff_Srt += "\n";
+      Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
+      Buff_Srt += FW_VALUE;
+      Buff_Srt += " วัตต์";  // วัตต์
+      Buff_Srt += "\n";
+      Buff_Srt += "กำลังสะท้อน : ";
+      Buff_Srt += REF_VALUE;
+      Buff_Srt += " วัตต์";  // วัตต์
+      Blynk.logEvent("vswr_critical", Buff_Srt);
       Power_ON_Status = false;
 
       while (true) {
@@ -566,15 +581,17 @@ void Check_Condition_VSWR(void) {
       }
     }
   } else {
+    if (debug) Serial.println("\tVSWR Critical : false");
+
     Count_VSWR_Critical = 0;
     // ----------- check VSWR warning ----------------
-    if (debug) Serial.println("-> check VSWR warning");
-    if ((VSWR > VSWR_warning_threshold) && Notify_Warning) {
-      Reset_VSWR_Warning_Time = millis();  // Get Time for Reset warning
-      if (VSWR_Warning) {                  // Radio Station detial
-        Serial.println("=> FW VSWR Warning");
+    if (debug) Serial.println("#: check VSWR warning");
+    if ((VSWR >= float(VSWR_warning_threshold)) && Notify_Warning) {
+      Reset_VSWR_Warning_Time = millis();
+      Serial.println("\tVSRW is Higher -> Warning");
 
-        /*
+      if (VSWR_Warning) {  // Radio Station detial
+        Serial.println("Send VSWR warning");
         Buff_Srt = "\n";
         Buff_Srt += StringRadioStation;
         Buff_Srt += RadioStationName;
@@ -596,15 +613,20 @@ void Check_Condition_VSWR(void) {
         Buff_Srt += "กำลังสะท้อน : ";
         Buff_Srt += REF_VALUE;
         Buff_Srt += " วัตต์";  // วัตต์
-
-        sendLine(Buff_Srt);
-        */
-
+        Blynk.logEvent("vswr_warning", Buff_Srt);
+        beep();
+        delay(3000);
         VSWR_Warning = false;
       }
     } else {
-      if ((millis() - Reset_VSWR_Warning_Time > Time_for_Reset_Warning_Check) && (VSWR < (VSWR_warning_threshold - 0.12))) {
-        VSWR_Warning = true;
+      if (debug) Serial.println("\tVSWR warning : false");
+      if ((millis() - Reset_VSWR_Warning_Time > Time_for_Reset_Warning_Check) && (VSWR < (VSWR_warning_threshold - 0.1))) {
+        if (VSWR_Warning == false) {
+          VSWR_Warning = true;
+          Serial.print("\tReset VSWR Warning status ");
+          Serial.println(" => VSWR_Warning status " + String(VSWR_Warning));
+          delay(3000);
+        }
       }
     }
   }
@@ -612,122 +634,126 @@ void Check_Condition_VSWR(void) {
 //----------------------------------------------------------
 void Check_Condition_Temp(void) {
   // ----------- check TX_Temp warning ----------------
-  if (debug) Serial.println("-> check TX_Temp warning");
+  if (debug) Serial.println("#: check TX_Temp warning");
   if ((TX_Temp > TX_Temp_Warning_threshold) && Notify_Warning) {
     Reset_TX_Temp_Warning_Time = millis();  // Get Time for Reset warning
+    Serial.println("\tTX Temperature is Higher -> Warning");
+
     if (TX_Temp_Warning) {
-      Serial.println("=> TX Temperature Warning");
-
-      /*
-      // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += "\n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += TX_Temp_Warning_MSG;
-        Buff_Srt += "\n";
-        Buff_Srt += "อุณหภูมิ : ";
-        Buff_Srt += TX_Temp;
-        Buff_Srt += " องศา";
-
-        sendLine(Buff_Srt);
-        */
-
+      Serial.println("Send TX Temperature Warning");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += TX_Temp_Warning_MSG;
+      Buff_Srt += "\n";
+      Buff_Srt += "อุณหภูมิ : ";
+      Buff_Srt += TX_Temp;
+      Buff_Srt += " องศา";
+      Blynk.logEvent("temperature_warning", Buff_Srt);
+      beep();
+      delay(3000);
       TX_Temp_Warning = false;
     }
   } else {
+    if (debug) Serial.println("\tTX Temperature Warning : false");
     if ((millis() - Reset_TX_Temp_Warning_Time > Time_for_Reset_Warning_Check) && (TX_Temp < (TX_Temp_Warning_threshold - 2))) {
-      TX_Temp_Warning = true;
+      if (TX_Temp_Warning == false) {
+        TX_Temp_Warning = true;
+        Serial.print("\tReset TX Temperature Warning status ");
+        Serial.println(" => TX_Temp_Warning status " + String(TX_Temp_Warning));
+        delay(3000);
+      }
     }
   }
 
   // ----------- check Room_Temp warning ----------------
-  if (debug) Serial.println("-> check Room_Temp warning");
+  if (debug) Serial.println("#: check Room_Temp warning");
   if ((Room_Temp > ROOM_Temp_Warning_threshold) && Notify_Warning) {
-    ROOM_Temp_Warning_Time = millis();  // Get Time for Reset warning
+    ROOM_Temp_Warning_Time = millis();
+    Serial.println("\tRoom Temperature is Higher -> Warning");
+
     if (ROOM_Temp_Warning) {
-
-      Serial.println("=> TX Temperature Warning");
-
-      /*
-      // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += "\n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += ROOM_Temp_Warning_MSG;
-        Buff_Srt += "\n";
-        Buff_Srt += "อุณหภูมิ : ";
-        Buff_Srt += Room_Temp;
-        Buff_Srt += " องศา";
-
-        sendLine(Buff_Srt);
-        */
+      Serial.println("Send Room Temperature Warning");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += ROOM_Temp_Warning_MSG;
+      Buff_Srt += "\n";
+      Buff_Srt += "อุณหภูมิ : ";
+      Buff_Srt += Room_Temp;
+      Buff_Srt += " องศา";
+      Blynk.logEvent("temperature_warning", Buff_Srt);
+      beep();
+      delay(3000);
       ROOM_Temp_Warning = false;
     }
   } else {
+    if (debug) Serial.println("\tROOM Temperature Warning : false");
     if ((millis() - ROOM_Temp_Warning_Time > Time_for_Reset_Warning_Check) && (Room_Temp < (ROOM_Temp_Warning_threshold - 2))) {
-      ROOM_Temp_Warning = true;
+      if (ROOM_Temp_Warning == false) {
+        ROOM_Temp_Warning = true;
+        Serial.print("\tReset ROOM Temperature Warning status ");
+        Serial.println(" => ROOM_Temp_Warning status " + String(ROOM_Temp_Warning));
+        delay(3000);
+      }
     }
   }
 }
 //----------------------------------------------------------
 void Check_Condition_Audio(void) {
   // ----------- check Audio warning ----------------
-  if (debug) Serial.println("-> check Audio warning");
+  if (debug) Serial.println("#: check Audio warning");
   if ((AudioLevel < 10) && Power_ON_Status && Notify_Warning) {
     Audio_Warning_Count++;
 
     if ((Audio_Warning_Count > 120) && (Audio_Warning_Count < 300) && Audio_Warning_First) {
-
       Serial.println("=> Audio Loss 2 minute Warning");
+      Serial.println("Send Audio Loss 2 minute Warning");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += Audio_Warning_First_MSG;
+      Blynk.logEvent("audio_loss_warning", Buff_Srt);
+      beep();
+      delay(3000);
 
-      /*
-      // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += "\n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
-
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += Audio_Warning_First_MSG;
-
-        sendLine(Buff_Srt);
-        */
       Audio_Warning_First = false;
     } else if ((Audio_Warning_Count > 300) && Audio_Warning_Seconed) {
       Serial.println("=> Audio Loss 5 minute Warning");
 
-      /*
-      // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += "\n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
+      Serial.println("Send Audio Loss 5 minute Warning");
+      Buff_Srt = "\n";
+      Buff_Srt += StringRadioStation;
+      Buff_Srt += RadioStationName;
+      Buff_Srt += "\n";
+      Buff_Srt += StringFreq;
+      Buff_Srt += RadioFreq;
+      Buff_Srt += " MHz \n";
+      Buff_Srt += "*****************************";
+      Buff_Srt += "\n";
+      Buff_Srt += Audio_Warning_Seconed_MSG;
+      Blynk.logEvent("audio_loss_warning", Buff_Srt);
+      beep();
+      delay(3000);
 
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += Audio_Warning_Seconed_MSG;
-
-        sendLine(Buff_Srt);
-        */
       Audio_Warning_Seconed = false;
     } else if (!Audio_Warning_First && !Audio_Warning_Seconed) {
       Audio_Warning_Count = 0;
@@ -745,6 +771,7 @@ void Power_TX_ON(void) {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("  POWER TX -> ON ");
+
   if (!Power_ON_Status) {
     lcd.setCursor(0, 2);
     lcd.print("                    ");
@@ -760,7 +787,7 @@ void Power_TX_ON(void) {
       // esp_task_wdt_reset();  // Reset watchdog
 
       lcd.setCursor(i, 3);
-      lcd.print("#");
+      lcd.print("*");
       delay(700);
       Serial.print(i);
       Serial.print(" ");
@@ -786,24 +813,6 @@ void Power_TX_ON(void) {
     Serial.println(":# Send Notify : Power ON ");
     Serial.println(":# TX Power is ON !!");
 
-    /*
-    // Radio Station detial
-    Buff_Srt = "\n";
-    Buff_Srt += Power_On_MSG;
-    Buff_Srt += "\n";
-    Buff_Srt += "*****************************";
-    Buff_Srt += "\n";
-    Buff_Srt += StringRadioStation;
-    Buff_Srt += RadioStationName;
-    Buff_Srt += "\n";
-    Buff_Srt += StringFreq;
-    Buff_Srt += RadioFreq;
-    Buff_Srt += " MHz \n";
-    Buff_Srt += StringStationID;
-    Buff_Srt += RadioStationID;
-
-    sendLine(Buff_Srt);
-*/
     Serial.println("GET Parameter with about 60 secend");
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -839,6 +848,25 @@ void Power_TX_ON(void) {
       for (int i = 0; i < sizeof(buffStartTime); i++)
         StartTime += buffStartTime[i];
     }
+
+    Serial.println("Send Power OFF Warning");
+    Buff_Srt = "\n";
+    Buff_Srt += Power_On_MSG;
+    Buff_Srt += "\n";
+    Buff_Srt += "*****************************";
+    Buff_Srt += "\n";
+    Buff_Srt += StringRadioStation;
+    Buff_Srt += RadioStationName;
+    Buff_Srt += " \n";
+    Buff_Srt += StringFreq;
+    Buff_Srt += RadioFreq;
+    Buff_Srt += " MHz \n";
+    Buff_Srt += StringStationID;
+    Buff_Srt += RadioStationID;
+    Blynk.logEvent("system_info", Buff_Srt);
+    beep();
+    delay(3000);
+
     // Get Start system start time
     SystemStartTime = Run_Time_Min;
     SendWelcomeNotify = true;
@@ -849,7 +877,8 @@ void Power_TX_ON(void) {
 void Power_TX_OFF(void) {
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("  POWER TX => ON ");
+  lcd.print("  POWER TX => OFF ");
+
   if (Power_ON_Status) {
     beep_PWR();
 
@@ -860,24 +889,6 @@ void Power_TX_OFF(void) {
     lcd.setCursor(0, 0);
     lcd.print("-> POWER TX => OFF !! ");
     Serial.println(":# Send Notify : Power Off  ");
-    /*
-        // Radio Station detial
-        Buff_Srt = "\n";
-        Buff_Srt += Power_Off_MSG;
-        Buff_Srt += "\n";
-        Buff_Srt += "*****************************";
-        Buff_Srt += "\n";
-        Buff_Srt += StringRadioStation;
-        Buff_Srt += RadioStationName;
-        Buff_Srt += " \n";
-        Buff_Srt += StringFreq;
-        Buff_Srt += RadioFreq;
-        Buff_Srt += " MHz \n";
-        Buff_Srt += StringStationID;
-        Buff_Srt += RadioStationID;
-
-        sendLine(Buff_Srt);
-    */
 
     Power_ON_Status = false;
     EEPROM_Write(160, 162, "0");
@@ -886,6 +897,25 @@ void Power_TX_OFF(void) {
     Serial.println(Get);
     delay(5000);
     lcd.clear();
+
+    // Blybk log
+    Serial.println("Send Power OFF Warning");
+    Buff_Srt = "\n";
+    Buff_Srt += Power_Off_MSG;
+    Buff_Srt += "\n";
+    Buff_Srt += "*****************************";
+    Buff_Srt += "\n";
+    Buff_Srt += StringRadioStation;
+    Buff_Srt += RadioStationName;
+    Buff_Srt += " \n";
+    Buff_Srt += StringFreq;
+    Buff_Srt += RadioFreq;
+    Buff_Srt += " MHz \n";
+    Buff_Srt += StringStationID;
+    Buff_Srt += RadioStationID;
+    Blynk.logEvent("system_info", Buff_Srt);
+    beep();
+    delay(3000);
   }
   return;
 }
@@ -893,52 +923,52 @@ void Power_TX_OFF(void) {
 void WelcomeNotify(void) {
   if ((Run_Time_Min >= (SystemStartTime + 2)) && SendWelcomeNotify) {
     SendWelcomeNotify = false;
+
+    Buff_Srt = "\n";
+    Buff_Srt += StringRadioStation;
+    Buff_Srt += RadioStationName;
+    Buff_Srt += "\n";
+    Buff_Srt += StringFreq;
+    Buff_Srt += RadioFreq;
+    Buff_Srt += " MHz \n";
+    Buff_Srt += "*****************************";
+    Buff_Srt += "\n";
+    Buff_Srt += "รายงานสถานะเครื่องส่งวิทยุ";
+    Buff_Srt += "\n";
+    Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
+    Buff_Srt += FW_VALUE;
+    Buff_Srt += " วัตต์";  // วัตต์
+    Buff_Srt += "\n";
+    Buff_Srt += "กำลังสะท้อน : ";
+    Buff_Srt += REF_VALUE;
+    Buff_Srt += " วัตต์";  // วัตต์
+    Buff_Srt += "\n";
+    Buff_Srt += "VSWR : ";
+    Buff_Srt += VSWR;
+    Buff_Srt += "\n";
+    Buff_Srt += "อุณหภูมิเครื่องส่ง : ";
+    Buff_Srt += TX_Temp;
+    Buff_Srt += " องศา";
+    Buff_Srt += "\n";
+    Buff_Srt += "อุณหภูมิห้อง : ";
+    Buff_Srt += Room_Temp;
+    Buff_Srt += " องศา";
+
+    Buff_Srt += "\n";
+    Buff_Srt += "\n";
+    Buff_Srt += "เปิดใช้งานเครื่องส่งวิทยุมาแล้ว ";
+    Buff_Srt += "\n";
+    Buff_Srt += String(Run_Time_day);
+    Buff_Srt += " วัน ";
+    Buff_Srt += String(Run_Time_Hour);
+    Buff_Srt += " ชั่วโมง ";
+    Buff_Srt += String(Run_Time_Min);
+    Buff_Srt += " นาที";
+    Buff_Srt += "\n";
+
+    Serial.println("Send FM Status Info");
+    Blynk.logEvent("system_info", Buff_Srt);
     beep();
-    /*
-  Buff_Srt = "\n";
-  Buff_Srt += StringRadioStation;
-  Buff_Srt += RadioStationName;
-  Buff_Srt += "\n";
-  Buff_Srt += StringFreq;
-  Buff_Srt += RadioFreq;
-  Buff_Srt += " MHz \n";
-  Buff_Srt += "*****************************";
-  Buff_Srt += "\n";
-  Buff_Srt += "รายงานสถานะเครื่องส่งวิทยุ";
-  Buff_Srt += "\n";
-  Buff_Srt += "กำลังส่ง : ";  // กำลังส่ง
-  Buff_Srt += FW_VALUE;
-  Buff_Srt += " วัตต์";  // วัตต์
-  Buff_Srt += "\n";
-  Buff_Srt += "กำลังสะท้อน : ";
-  Buff_Srt += REF_VALUE;
-  Buff_Srt += " วัตต์";  // วัตต์
-  Buff_Srt += "\n";
-  Buff_Srt += "VSWR : ";
-  Buff_Srt += VSWR;
-  Buff_Srt += "\n";
-  Buff_Srt += "อุณหภูมิเครื่องส่ง : ";
-  Buff_Srt += TX_Temp;
-  Buff_Srt += " องศา";
-  Buff_Srt += "\n";
-  Buff_Srt += "อุณหภูมิห้อง : ";
-  Buff_Srt += Room_Temp;
-  Buff_Srt += " องศา";
-
-  Buff_Srt += "\n";
-  Buff_Srt += "\n";
-  Buff_Srt += "เปิดใช้งานเครื่องส่งวิทยุมาแล้ว ";
-  Buff_Srt += "\n";
-  Buff_Srt += String(Run_Time_day);
-  Buff_Srt += " วัน ";
-  Buff_Srt += String(Run_Time_Hour);
-  Buff_Srt += " ชั่วโมง ";
-  Buff_Srt += String(Run_Time_Min);
-  Buff_Srt += " นาที";
-  Buff_Srt += "\n";
-
-  Serial.println(":# Send Line_Notify -> First Parameter  ");
-  sendLine(Buff_Srt);
-  */
+    delay(3000);
   }
 }

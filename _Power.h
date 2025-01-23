@@ -21,11 +21,11 @@ float GetVSRW(float, float);
 
 //--------------------------------------------------------------
 float GetFW(void) {
-  if (debug) Serial.print(":# Reading FW Value.. => ");
+  if (debug) Serial.println(":# Reading FW Value..");
 
   int index = 0, i;
-  int ALL_index = 31;  // for Power Amp 1500 Watt Version
-  // int ALL_index = 63; // for Power Amp 500 Watt Version
+  // int ALL_index = 31;  // for Power Amp 1500 Watt Version
+  int ALL_index = 63;  // for Power Amp 500 Watt Version
 
   float Vin_FW = 0, FW_VALUE;
   for (i = 0; i < 1000; i++)  // Average ADC Value
@@ -35,9 +35,12 @@ float GetFW(void) {
   }
 
   Vin_FW = float(Vin_FW / 1000);
+  // Serial.println("Vin_FW :" + String(Vin_FW));
+
   if (Vin_FW > 0.001) {
     Vin_FW += 0.2;  // volteOffset_factor;
 
+    // Searching Index of Vin_FW
     for (i = 1; i < ALL_index; i++) {
       if ((Foward_v[i - 1] < Vin_FW) && (Foward_v[i] > Vin_FW)) {
         index = i;
@@ -49,29 +52,51 @@ float GetFW(void) {
     float X1 = Foward_v[index - 1];
     float X2 = Foward_v[index];
 
+    // Calculate Interpolate FW value
     FW_VALUE = ((Y2 - Y1) * ((Vin_FW - X1) / (X2 - X1))) + Y1;
-  } else {
-    FW_VALUE = 0;
-    if (debug) {
-      Serial.print(" FW :");
+    /*if (debug) {
+          Serial.print("Index: ");
+      Serial.print(index);
+      Serial.print(" ,Y1: ");
+      Serial.print(Y1);
+      Serial.print(",Y2:");
+      Serial.print(Y2);
+      Serial.print(" ,X1:");
+      Serial.print(X1);
+      Serial.print(",X2:");
+      Serial.print(X2);
+      Serial.print(" ,Vin:");
+      Serial.print(Vin_FW);
+      Serial.print(" ,Forward:");
       Serial.print(FW_VALUE);
       Serial.println();
-    }
+  }*/
+
+  } else {
+    FW_VALUE = 0;
+  }
+  if (debug) {
+    Serial.print(" FW :");
+    Serial.print(FW_VALUE);
+    Serial.println();
   }
   return FW_VALUE;
 }
 //--------------------------------------------------------------
 float GetREF(void) {
-  if (debug) Serial.print(":# Reading REF Value... => ");
+  if (debug) Serial.println(":# Reading REF Value...");
 
   int index_Ref = 0, i_Ref, ALL_index_Ref = 12;  // for NBTC Version 20
   float Vin_REF = 0, REF_VALUE;
+
   for (i_Ref = 0; i_Ref < 1000; i_Ref++) {
     int sensorValue2 = analogRead(ADC_REF);
     Vin_REF = Vin_REF + (float(sensorValue2) / 4095.0 * 3.3);
   }
 
   Vin_REF = float(Vin_REF / 1000);
+  // Serial.println("Vin_REF :" + String(Vin_REF));
+
   //-------- V ref offset --------
   if (Vin_REF > 0.001) {
     Vin_REF += 0;  // volteOffset_factor;
@@ -89,13 +114,32 @@ float GetREF(void) {
     float X4 = Reflec_v[index_Ref];
 
     REF_VALUE = ((Y4 - Y3) * ((Vin_REF - X3) / (X4 - X3))) + Y3;
-  } else {
-    REF_VALUE = 0;
-    if (debug) {
-      Serial.print(" REF:");
+    /*    if (debug) {
+          Serial.print("Index_Ref:");
+      Serial.print(index_Ref);
+      Serial.print(" ,Y3:");
+      Serial.print(Y3);
+      Serial.print(",Y4:");
+      Serial.print(Y4);
+      Serial.print(" ,X3:");
+      Serial.print(X3);
+      Serial.print(",X4:");
+      Serial.print(X4);
+      Serial.print(" ,Vin_REF:");
+      Serial.print(Vin_REF);
+      Serial.print(" ,Reflec:");
       Serial.print(REF_VALUE);
       Serial.println();
-    }
+    }*/
+
+  } else {
+    REF_VALUE = 0;
+  }
+
+  if (debug) {
+    Serial.print(" REF:");
+    Serial.print(REF_VALUE);
+    Serial.println();
   }
 
   return REF_VALUE;

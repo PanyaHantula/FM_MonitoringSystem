@@ -6,7 +6,7 @@
 
 //--------------------------------------------------------------
 #define BLYNK_TEMPLATE_ID "TMPL6Gf2TIhaM"
-#define BLYNK_FIRMWARE_VERSION "4.0.0"
+#define BLYNK_FIRMWARE_VERSION "4.1.1"
 #define BLYNK_TEMPLATE_NAME "FMmonitor"
 
 #define BLYNK_PRINT Serial
@@ -150,8 +150,8 @@ BLYNK_WRITE(V18) {
   Serial.println(VSWR_warning_threshold);
   beep();
 
-  EEPROM_Write(117, 116, String(VSWR_warning_threshold));
-  VSWR_warning_threshold = EEPROM_Read(117, 116).toFloat();
+  EEPROM_Write(117, 123, String(VSWR_warning_threshold));
+  VSWR_warning_threshold = EEPROM_Read(117, 123).toFloat();
   Serial.print("-> VSWR_warning_threshold : ");
   Serial.println(VSWR_warning_threshold);
 

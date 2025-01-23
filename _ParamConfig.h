@@ -47,19 +47,19 @@ int voltage_Warning_Time;
 int Count_FW_Critical = 0;
 int Count_VSWR_Critical = 0;
 
-String FW_Warning_MSG = "กำลังส่งสูงผิดปกติ โปรดตรวจสอบ";
-String VSWR_Warning_MSG = "ค่า VSWR สูงผิดปกติ โปรดตรวจสอบ";
-String TX_Temp_Warning_MSG = "อุณหภูมิเครื่องส่งสูงผิดปกติ โปรดตรวจสอบ";
-String ROOM_Temp_Warning_MSG = "อุณหภูมิห้องสูงผิดปกติ โปรดตรวจสอบ";
-String FW_Critical_MSG = "กำลังส่งสูงเกินขีดจำกัด ปิดเครื่องส่งวิทยุอัตโนมัติ";
-String VSWR_Critical_MSG = "ค่า VSWR สูงเกินขีดจำกัดปิดเครื่องส่งวิทยุอัตโนมัติ";
+String FW_Warning_MSG = "กำลังส่งสูงผิดปกติ \nโปรดตรวจสอบ";
+String VSWR_Warning_MSG = "ค่า VSWR สูงผิดปกติ \nโปรดตรวจสอบ";
+String TX_Temp_Warning_MSG = "อุณหภูมิเครื่องส่งสูงผิดปกติ \nโปรดตรวจสอบ";
+String ROOM_Temp_Warning_MSG = "อุณหภูมิห้องสูงผิดปกติ \nโปรดตรวจสอบ";
+String FW_Critical_MSG = "กำลังส่งสูงเกินขีดจำกัด \nปิดเครื่องส่งวิทยุอัตโนมัติ";
+String VSWR_Critical_MSG = "ค่า VSWR สูงเกินขีดจำกัด \nปิดเครื่องส่งวิทยุอัตโนมัติ";
 
 int Audio_Warning_Count = 0;
 bool Audio_Warning_First = true;
 bool Audio_Warning_Seconed = true;
 
-String Audio_Warning_First_MSG = "สัญญาณเสียงขาดหายมาแล้ว 2 นาที โปรดตรวจสอบ";
-String Audio_Warning_Seconed_MSG = "สัญญาณเสียงขาดหายมาแล้ว 5 นาที โปรดตรวจสอบ";
+String Audio_Warning_First_MSG = "สัญญาณเสียงขาดหายมาแล้ว 2 นาที \nโปรดตรวจสอบ";
+String Audio_Warning_Seconed_MSG = "สัญญาณเสียงขาดหายมาแล้ว 5 นาที \nโปรดตรวจสอบ";
 
 // float lattitude = 14.923493, longtitude = 102.029515;
 float lattitude = 0.0, longtitude = 0.0;

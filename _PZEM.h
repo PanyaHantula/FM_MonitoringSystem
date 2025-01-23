@@ -19,7 +19,7 @@ float GetVoltage(void) {
   float voltage = pzem.voltage();
   if (!isnan(voltage)) {
     if (debug) {
-      Serial.print("- Voltage: ");
+      Serial.print("\t- Voltage: ");
       Serial.print(voltage);
       Serial.println("V");
     }
@@ -34,12 +34,12 @@ float Getcurrent(void) {
   float current = pzem.current();
   if (!isnan(current)) {
     if (debug) {
-      Serial.print("- Current: ");
+      Serial.print("\t- Current: ");
       Serial.print(current);
       Serial.println("A");
     }
   } else {
-    Serial.println("- Error reading current");
+    Serial.println("\t- Error reading current");
     current = 0;
   }
   return current;
@@ -49,12 +49,12 @@ float Getpower(void) {
   float power = pzem.power();
   if (!isnan(power)) {
     if (debug) {
-      Serial.print("- Power: ");
+      Serial.print("\t- Power: ");
       Serial.print(power);
       Serial.println("W");
     }
   } else {
-    Serial.println("- Error reading power");
+    Serial.println("\t- Error reading power");
     power = 0;
   }
   return power;
@@ -64,12 +64,12 @@ float Getenergy(void) {
   float energy = pzem.energy();
   if (!isnan(energy)) {
     if (debug) {
-      Serial.print("- Energy: ");
+      Serial.print("\t- Energy: ");
       Serial.print(energy, 3);
       Serial.println("kWh");
     }
   } else {
-    Serial.println("- Error reading energy");
+    Serial.println("\t- Error reading energy");
     energy = 0;
   }
   return energy;
@@ -79,12 +79,12 @@ float Getfrequency(void) {
   float frequency = pzem.frequency();
   if (!isnan(frequency)) {
     if (debug) {
-      Serial.print("- Frequency: ");
+      Serial.print("\t- Frequency: ");
       Serial.print(frequency, 1);
       Serial.println("Hz");
     }
   } else {
-    Serial.println("- Error reading frequency");
+    Serial.println("\t- Error reading frequency");
     frequency = 0;
   }
   return frequency;
@@ -94,11 +94,11 @@ float Getpf(void) {
   float pf = pzem.pf();
   if (!isnan(pf)) {
     if (debug) {
-      Serial.print("- PF: ");
+      Serial.print("\t- PF: ");
       Serial.println(pf);
     }
   } else {
-    Serial.println("- Error reading power factor");
+    Serial.println("\t- Error reading power factor");
     pf = 0;
   }
   return pf;
