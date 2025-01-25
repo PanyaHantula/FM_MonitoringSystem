@@ -1,6 +1,7 @@
 {
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
-        "numeric": "cpp"
+        "ostream": "cpp",
+        "print": "cpp"
     }
 }
