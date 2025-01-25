@@ -34,12 +34,12 @@ void LCD_ShowParam(void);
 #include "_Blynk.h"
 #include "_DHT.h"
 #include "_Power.h"
+#include "_Audio.h"
 
 //----- PIN Config --------------
 #define Relay_AC 4
 #define Ralay_Excitor 19
 #define LED 15
-#define ADC_Auido 34
 
 // sda= GPIO_21 /scl= GPIO_22
 #define LCD_SDA 21
@@ -304,8 +304,7 @@ void GetParamALL(void) {
   FW_VALUE = GetFW();
   REF_VALUE = GetREF();
   VSWR = GetVSRW(FW_VALUE, REF_VALUE);
-  AudioLevel = GetAudioLevel();
-  AudioVU_dB = ConvertADC_to_dB(AudioLevel);
+  AudioVU_dB = GetAudioLevel();
 
   TX_Temp = GET_TX_Temperature();
   Room_Temp = GET_ROOM_Temperature();
@@ -332,27 +331,7 @@ void GetParamALL(void) {
     Serial.println();
   }
 }
-//----------------------------------------------------------
-float GetAudioLevel(void) {
-  float Buff_ADC_Audio = analogRead(ADC_Auido) / 4.0;
-  if (debug) {
-    Serial.println(":# Reading Audio UV Value...");
 
-    Serial.print("Audio ADC: ");
-    Serial.print(Buff_ADC_Audio);
-  }
-  return Buff_ADC_Audio;
-}
-//----------------------------------------------------------
-float ConvertADC_to_dB(float ADC) {
-  float dB = (ADC - 280.3754386) / 29.85350877;
-  if (debug) {
-    Serial.print(" -> ");
-    Serial.print(dB);
-    Serial.println(" dB");
-  }
-  return dB;
-}
 //----------------------------------------------------------
 void LCD_ShowInfo(void) {
   lcd.clear();
@@ -393,9 +372,9 @@ void LCD_ShowParam(void) {
   lcd.print(Buff_Srt);
 
   Buff_Srt = "AUDIO:";
-  if (AudioLevel > 0.001) {
+  if (AudioLevel >= -24) {
     Buff_Srt += String(AudioVU_dB);
-    Buff_Srt += " dB";
+    Buff_Srt += " dBu";
   } else {
     Buff_Srt += "NO AUDIO";
   }
@@ -715,7 +694,7 @@ void Check_Condition_Temp(void) {
 void Check_Condition_Audio(void) {
   // ----------- check Audio warning ----------------
   if (debug) Serial.println("#: check Audio warning");
-  if ((AudioLevel < 10) && Power_ON_Status && Notify_Warning) {
+  if ((AudioLevel < 1) && Power_ON_Status && Notify_Warning) {
     Audio_Warning_Count++;
 
     if ((Audio_Warning_Count > 120) && (Audio_Warning_Count < 300) && Audio_Warning_First) {
